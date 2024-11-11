@@ -1,5 +1,5 @@
-"use client";
 import type { FormEvent } from "react";
+
 import { useSendGatewayTransaction } from "@gobob/sats-wagmi";
 import { type Hex, parseUnits } from "viem";
 
