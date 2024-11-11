@@ -23,9 +23,15 @@ export const blocks: BlockType[] = [
         unit: "BTC",
       },
       {
-        type: "text",
+        type: "address",
+        label: "BOB Address",
+        placeholder: "0x...",
+        required: true,
+      },
+      {
+        type: "select",
         label: "Target Chain",
-        placeholder: "ETH/BSC/etc",
+        options: ["BOB Sepolia", "BOB Mainnet"],
         required: true,
       },
     ],
