@@ -1,10 +1,5 @@
 "use client";
-import {
-  useConnect,
-  SatsConnector,
-  useAccount,
-  useDisconnect,
-} from "@gobob/sats-wagmi";
+import { useConnect, useAccount, useDisconnect } from "@gobob/sats-wagmi";
 import { useEffect } from "react";
 
 export default function Home() {
