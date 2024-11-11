@@ -2,6 +2,10 @@ import { blocks } from "@/constants/paths";
 import { ArrowRightLeft } from "lucide-react";
 import React, { useState } from "react";
 import PuzzlePiece from "./PuzzlePiece";
+import TransactionFlowVisualizer from "./TrasnactionFlowVisualiser";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 const BlockchainPuzzle: React.FC = () => {
   const [chainBlocks, setChainBlocks] = useState<BlockType[]>([]);
@@ -9,6 +13,7 @@ const BlockchainPuzzle: React.FC = () => {
   const [blockValues, setBlockValues] = useState<
     Record<string, Record<string, string>>
   >({});
+
   const handleValueChange = (blockId: string, key: string, value: string) => {
     setBlockValues((prev) => ({
       ...prev,
@@ -22,7 +27,6 @@ const BlockchainPuzzle: React.FC = () => {
   const removeBlock = (index: number) => {
     setChainBlocks((prev) => {
       const newBlocks = prev.filter((_, i) => i !== index);
-      // Clean up values for removed and subsequent blocks
       const newValues = { ...blockValues };
       for (let i = index; i < prev.length; i++) {
         delete newValues[`chain-${i}`];
@@ -31,6 +35,7 @@ const BlockchainPuzzle: React.FC = () => {
       return newBlocks;
     });
   };
+
   const isCompatibleWithChain = (block: BlockType): boolean => {
     if (chainBlocks.length === 0) return true;
     const lastBlock = chainBlocks[chainBlocks.length - 1];
@@ -52,117 +57,160 @@ const BlockchainPuzzle: React.FC = () => {
     }
     setDraggedBlock(null);
   };
+
   const ChainPreview: React.FC<{
     blocks: BlockType[];
     values: Record<string, Record<string, string>>;
   }> = ({ blocks, values }) => {
     return (
-      <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg">
-        <h3 className="text-lg font-semibold mb-2">Chain Preview</h3>
-        <div className="flex flex-col gap-4">
-          {/* Flow diagram */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {blocks.map((block, index) => (
-              <React.Fragment key={index}>
-                <div
-                  className={`px-4 py-2 rounded-lg ${
-                    block.color.split(" ")[0]
-                  } text-white`}
-                >
-                  <div className="flex items-center gap-2">
-                    <block.icon size={16} />
-                    <span>{block.name}</span>
-                  </div>
-                  {values[block.id] && (
-                    <div className="text-xs mt-1">
-                      {Object.entries(values[block.id]).map(([key, value]) => (
-                        <div key={key} className="opacity-80">
-                          {key}: {value}
-                        </div>
-                      ))}
+      <Card className="mt-8 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
+        <CardHeader>
+          <CardTitle className="text-black font-bold">Chain Preview</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <ScrollArea className="w-full whitespace-nowrap rounded-lg border-2 border-black p-1">
+            <div className="flex items-center gap-4 p-4">
+              {blocks.map((block, index) => (
+                <React.Fragment key={index}>
+                  <div
+                    className={cn(
+                      "px-4 py-3 rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+                      "transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <block.icon size={16} className="text-black" />
+                      <span className="font-bold text-black">{block.name}</span>
                     </div>
+                    {values[block.id] && (
+                      <div className="text-xs mt-2 space-y-1">
+                        {Object.entries(values[block.id]).map(
+                          ([key, value]) => (
+                            <div
+                              key={key}
+                              className="text-gray-600 font-medium"
+                            >
+                              {key}: {value}
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {index < blocks.length - 1 && (
+                    <ArrowRightLeft
+                      className="text-black flex-shrink-0"
+                      size={16}
+                    />
                   )}
-                </div>
-                {index < blocks.length - 1 && (
-                  <ArrowRightLeft className="text-gray-400" size={16} />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                </React.Fragment>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" className="bg-gray-200" />
+          </ScrollArea>
 
-          {/* Chain details */}
-          <div className="bg-gray-50 rounded-lg p-4 text-sm">
-            <div className="font-medium mb-2">Chain Details:</div>
-            <div>Type: {blocks.map((b) => b.category).join(" → ")}</div>
-            <div>Steps: {blocks.length}</div>
-          </div>
-        </div>
-      </div>
+          <Card className="border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+            <CardContent className="p-4 space-y-2">
+              <div className="font-bold text-black">Chain Details</div>
+              <div className="text-sm font-medium text-gray-600">
+                Type: {blocks.map((b) => b.category).join(" → ")}
+              </div>
+              <div className="text-sm font-medium text-gray-600">
+                Steps: {blocks.length}
+              </div>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
     );
   };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">
-          🧩 Blockchain Puzzle Builder
-        </h1>
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-8 shadow-xl mb-12">
-          <h2 className="text-2xl font-bold mb-6 text-gray-700">
-            Available Pieces
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blocks.map((block) => (
-              <PuzzlePiece
-                key={block.id}
-                block={block}
-                onDragStart={handleDragStart(block)}
-              />
-            ))}
-          </div>
+    <div className="min-h-screen bg-[#FFFDFA] p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-black text-black">
+            🧩 Blockchain Puzzle Builder
+          </h1>
+          <p className="text-gray-600 font-medium text-lg">
+            Drag and drop blocks to create your blockchain flow
+          </p>
         </div>
 
-        {/* Building Area */}
-        <div
-          className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 md:p-8 shadow-xl min-h-[300px]"
+        <Card className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
+          <CardHeader>
+            <CardTitle className="text-black font-bold text-2xl">
+              Available Pieces
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {blocks.map((block) => (
+                <PuzzlePiece
+                  key={block.id}
+                  block={block}
+                  onDragStart={handleDragStart(block)}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300"
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
-          <h2 className="text-2xl font-bold mb-6 text-gray-700">Your Chain</h2>
-          <div className="overflow-x-auto">
-            <div className="inline-flex items-center p-4 min-h-[200px] min-w-min">
-              <div className="flex items-center gap-3">
-                {" "}
-                {/* Increased gap */}
-                {chainBlocks.map((block, index) => (
-                  <div className="relative" key={`chain-${block.id}-${index}`}>
-                    <PuzzlePiece
-                      block={block}
-                      isChainPiece={true}
-                      isCompatible={
-                        index === 0 ||
-                        chainBlocks[index - 1].compatibleWith.includes(block.id)
-                      }
-                      position={
-                        index === 0
-                          ? "first"
-                          : index === chainBlocks.length - 1
-                          ? "last"
-                          : "middle"
-                      }
-                      values={blockValues[`chain-${index}`] || {}}
-                      onValueChange={(key, value) =>
-                        handleValueChange(`chain-${index}`, key, value)
-                      }
-                      onRemove={() => removeBlock(index)}
-                    />
-                  </div>
-                ))}
-              </div>
+          <CardHeader>
+            <CardTitle className="text-black font-bold text-2xl">
+              Your Chain
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-black rounded-lg p-2">
+              <ScrollArea className="w-full whitespace-nowrap rounded-lg p-4">
+                <div className="flex items-center gap-6">
+                  {chainBlocks.map((block, index) => (
+                    <div
+                      className="relative group transition-transform hover:translate-y-[-2px]"
+                      key={`chain-${block.id}-${index}`}
+                    >
+                      <PuzzlePiece
+                        block={block}
+                        isChainPiece={true}
+                        isCompatible={
+                          index === 0 ||
+                          chainBlocks[index - 1].compatibleWith.includes(
+                            block.id
+                          )
+                        }
+                        position={
+                          index === 0
+                            ? "first"
+                            : index === chainBlocks.length - 1
+                            ? "last"
+                            : "middle"
+                        }
+                        values={blockValues[`chain-${index}`] || {}}
+                        onValueChange={(key, value) =>
+                          handleValueChange(`chain-${index}`, key, value)
+                        }
+                        onRemove={() => removeBlock(index)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" className="bg-gray-200" />
+              </ScrollArea>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
         {chainBlocks.length > 0 && (
-          <ChainPreview blocks={chainBlocks} values={blockValues} />
+          <TransactionFlowVisualizer
+            blocks={chainBlocks}
+            values={blockValues}
+          />
         )}
       </div>
     </div>
