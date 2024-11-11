@@ -1,11 +1,101 @@
 import { blocks } from "@/constants/paths";
-import { ArrowRightLeft } from "lucide-react";
-import React, { useState } from "react";
+import { ArrowRightLeft, RotateCcw } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import PuzzlePiece from "./PuzzlePiece";
 import TransactionFlowVisualizer from "./TrasnactionFlowVisualiser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const ScrollButtons: React.FC<{
+  scrollRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement>;
+}> = ({ scrollRef, containerRef }) => {
+  const [showControls, setShowControls] = useState(false);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      if (scrollRef.current && containerRef.current) {
+        const { scrollWidth, clientWidth } = scrollRef.current;
+        setShowControls(scrollWidth > clientWidth);
+      }
+    };
+
+    checkScroll();
+    window.addEventListener("resize", checkScroll);
+    return () => window.removeEventListener("resize", checkScroll);
+  }, [scrollRef, containerRef]);
+
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      scrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  if (!showControls) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => scroll("left")}
+        className={cn(
+          "absolute left-2 top-1/2 -translate-y-1/2 z-10",
+          "w-8 h-8 flex items-center justify-center",
+          "bg-white border-2 border-black rounded-lg",
+          "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+          "hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+          "hover:translate-y-[-2px]",
+          "transition-all duration-200",
+          "disabled:opacity-50"
+        )}
+      >
+        ←
+      </button>
+      <button
+        onClick={() => scroll("right")}
+        className={cn(
+          "absolute right-2 top-1/2 -translate-y-1/2 z-10",
+          "w-8 h-8 flex items-center justify-center",
+          "bg-white border-2 border-black rounded-lg",
+          "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+          "hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+          "hover:translate-y-[-2px]",
+          "transition-all duration-200",
+          "disabled:opacity-50"
+        )}
+      >
+        →
+      </button>
+    </>
+  );
+};
+
+const ScrollableArea: React.FC<{
+  children: React.ReactNode;
+  className?: string;
+}> = ({ children, className }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <ScrollButtons scrollRef={scrollRef} containerRef={containerRef} />
+      <ScrollArea
+        className={cn("w-full whitespace-nowrap rounded-lg", className)}
+      >
+        <div ref={scrollRef} className="flex gap-6 px-12">
+          {children}
+        </div>
+        <ScrollBar orientation="horizontal" className="bg-gray-200" />
+      </ScrollArea>
+    </div>
+  );
+};
 
 const BlockchainPuzzle: React.FC = () => {
   const [chainBlocks, setChainBlocks] = useState<BlockType[]>([]);
@@ -14,6 +104,10 @@ const BlockchainPuzzle: React.FC = () => {
     Record<string, Record<string, string>>
   >({});
 
+  const resetChain = () => {
+    setChainBlocks([]);
+    setBlockValues({});
+  };
   const handleValueChange = (blockId: string, key: string, value: string) => {
     setBlockValues((prev) => ({
       ...prev,
@@ -58,73 +152,6 @@ const BlockchainPuzzle: React.FC = () => {
     setDraggedBlock(null);
   };
 
-  const ChainPreview: React.FC<{
-    blocks: BlockType[];
-    values: Record<string, Record<string, string>>;
-  }> = ({ blocks, values }) => {
-    return (
-      <Card className="mt-8 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
-        <CardHeader>
-          <CardTitle className="text-black font-bold">Chain Preview</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <ScrollArea className="w-full whitespace-nowrap rounded-lg border-2 border-black p-1">
-            <div className="flex items-center gap-4 p-4">
-              {blocks.map((block, index) => (
-                <React.Fragment key={index}>
-                  <div
-                    className={cn(
-                      "px-4 py-3 rounded-lg border-2 border-black bg-white shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
-                      "transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <block.icon size={16} className="text-black" />
-                      <span className="font-bold text-black">{block.name}</span>
-                    </div>
-                    {values[block.id] && (
-                      <div className="text-xs mt-2 space-y-1">
-                        {Object.entries(values[block.id]).map(
-                          ([key, value]) => (
-                            <div
-                              key={key}
-                              className="text-gray-600 font-medium"
-                            >
-                              {key}: {value}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {index < blocks.length - 1 && (
-                    <ArrowRightLeft
-                      className="text-black flex-shrink-0"
-                      size={16}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" className="bg-gray-200" />
-          </ScrollArea>
-
-          <Card className="border-2 border-black shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
-            <CardContent className="p-4 space-y-2">
-              <div className="font-bold text-black">Chain Details</div>
-              <div className="text-sm font-medium text-gray-600">
-                Type: {blocks.map((b) => b.category).join(" → ")}
-              </div>
-              <div className="text-sm font-medium text-gray-600">
-                Steps: {blocks.length}
-              </div>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-[#FFFDFA] p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -134,71 +161,97 @@ const BlockchainPuzzle: React.FC = () => {
           </p>
         </div>
 
+        {/* Available Pieces with Scroll Buttons */}
         <Card className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-black font-bold text-2xl">
               Available Pieces
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ScrollableArea className="border-2 border-black p-4">
               {blocks.map((block) => (
-                <PuzzlePiece
-                  key={block.id}
-                  block={block}
-                  onDragStart={handleDragStart(block)}
-                />
+                <div className="flex-shrink-0" key={block.id}>
+                  <PuzzlePiece
+                    block={block}
+                    onDragStart={handleDragStart(block)}
+                  />
+                </div>
               ))}
-            </div>
+            </ScrollableArea>
           </CardContent>
         </Card>
 
+        {/* Building Area with Scroll Buttons */}
         <Card
           className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300"
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-black font-bold text-2xl">
               Your Chain
             </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetChain}
+              className={cn(
+                "bg-white border-2 border-black",
+                "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+                "hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                "hover:translate-y-[-2px]",
+                "transition-all duration-200",
+                "text-black font-bold",
+                chainBlocks.length === 0 && "opacity-50 cursor-not-allowed"
+              )}
+              disabled={chainBlocks.length === 0}
+            >
+              <RotateCcw size={16} className="mr-2" />
+              Reset Chain
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="border-2 border-black rounded-lg p-2">
-              <ScrollArea className="w-full whitespace-nowrap rounded-lg p-4">
-                <div className="flex items-center gap-6">
-                  {chainBlocks.map((block, index) => (
-                    <div
-                      className="relative group transition-transform hover:translate-y-[-2px]"
-                      key={`chain-${block.id}-${index}`}
-                    >
-                      <PuzzlePiece
-                        block={block}
-                        isChainPiece={true}
-                        isCompatible={
-                          index === 0 ||
-                          chainBlocks[index - 1].compatibleWith.includes(
-                            block.id
-                          )
-                        }
-                        position={
-                          index === 0
-                            ? "first"
-                            : index === chainBlocks.length - 1
-                            ? "last"
-                            : "middle"
-                        }
-                        values={blockValues[`chain-${index}`] || {}}
-                        onValueChange={(key, value) =>
-                          handleValueChange(`chain-${index}`, key, value)
-                        }
-                        onRemove={() => removeBlock(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" className="bg-gray-200" />
-              </ScrollArea>
+              <ScrollableArea className="p-4">
+                {chainBlocks.length === 0 ? (
+                  <div className="flex items-center justify-center h-48 text-gray-500 font-medium w-full">
+                    Drag blocks here to build your chain
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-6">
+                    {chainBlocks.map((block, index) => (
+                      <div
+                        className="relative group transition-transform hover:translate-y-[-2px]"
+                        key={`chain-${block.id}-${index}`}
+                      >
+                        <PuzzlePiece
+                          block={block}
+                          isChainPiece={true}
+                          isCompatible={
+                            index === 0 ||
+                            chainBlocks[index - 1].compatibleWith.includes(
+                              block.id
+                            )
+                          }
+                          position={
+                            index === 0
+                              ? "first"
+                              : index === chainBlocks.length - 1
+                              ? "last"
+                              : "middle"
+                          }
+                          values={blockValues[`chain-${index}`] || {}}
+                          onValueChange={(key, value) =>
+                            handleValueChange(`chain-${index}`, key, value)
+                          }
+                          onRemove={() => removeBlock(index)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollableArea>
             </div>
           </CardContent>
         </Card>
