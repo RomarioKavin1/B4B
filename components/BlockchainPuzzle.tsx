@@ -1,5 +1,5 @@
 import { blocks } from "@/constants/paths";
-import { ArrowRightLeft, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import PuzzlePiece from "./PuzzlePiece";
 import TransactionFlowVisualizer from "./TrasnactionFlowVisualiser";
@@ -136,7 +136,7 @@ const BlockchainPuzzle: React.FC = () => {
     return lastBlock.compatibleWith.includes(block.id);
   };
 
-  const handleDragStart = (block: BlockType) => (e: React.DragEvent) => {
+  const handleDragStart = (block: BlockType) => () => {
     setDraggedBlock(block);
   };
 

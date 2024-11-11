@@ -2,7 +2,6 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRightLeft, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 import ExecuteButton from "./ExecuteButton";
 
 interface TransactionFlowVisualizerProps {
@@ -10,45 +9,45 @@ interface TransactionFlowVisualizerProps {
   values: Record<string, Record<string, string>>;
 }
 
-const calculateEstimates = (
-  blocks: BlockType[]
-): { totalGas: number; totalTime: number } => {
-  const estimates = blocks.reduce(
-    (acc, block) => {
-      switch (block.category) {
-        case "bridge":
-          return {
-            totalGas: acc.totalGas + 0.005,
-            totalTime: acc.totalTime + 15,
-          };
-        case "intent":
-          return {
-            totalGas: acc.totalGas + 0.002,
-            totalTime: acc.totalTime + 5,
-          };
-        case "defi":
-          return {
-            totalGas: acc.totalGas + 0.003,
-            totalTime: acc.totalTime + 3,
-          };
-        default:
-          return {
-            totalGas: acc.totalGas + 0.001,
-            totalTime: acc.totalTime + 1,
-          };
-      }
-    },
-    { totalGas: 0, totalTime: 0 }
-  );
+// const calculateEstimates = (
+//   blocks: BlockType[]
+// ): { totalGas: number; totalTime: number } => {
+//   const estimates = blocks.reduce(
+//     (acc, block) => {
+//       switch (block.category) {
+//         case "bridge":
+//           return {
+//             totalGas: acc.totalGas + 0.005,
+//             totalTime: acc.totalTime + 15,
+//           };
+//         case "intent":
+//           return {
+//             totalGas: acc.totalGas + 0.002,
+//             totalTime: acc.totalTime + 5,
+//           };
+//         case "defi":
+//           return {
+//             totalGas: acc.totalGas + 0.003,
+//             totalTime: acc.totalTime + 3,
+//           };
+//         default:
+//           return {
+//             totalGas: acc.totalGas + 0.001,
+//             totalTime: acc.totalTime + 1,
+//           };
+//       }
+//     },
+//     { totalGas: 0, totalTime: 0 }
+//   );
 
-  return estimates;
-};
+//   return estimates;
+// };
 
 const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
   blocks,
   values,
 }) => {
-  const { totalGas, totalTime } = calculateEstimates(blocks);
+  // const { totalGas, totalTime } = calculateEstimates(blocks);
 
   const renderBlockValues = (blockIndex: number) => {
     const blockValue = values[`chain-${blockIndex}`];
@@ -111,7 +110,7 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
                 </p>
               </CardContent>
             </Card>
-            <Card>
+            {/* <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Est. Gas</CardTitle>
               </CardHeader>
@@ -134,7 +133,7 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
                   Estimated completion time
                 </p>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           <Card>

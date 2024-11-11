@@ -25,17 +25,17 @@ export const blocks: BlockType[] = [
       {
         type: "address",
         label: "BOB Address",
-        placeholder: "0x...",
+        placeholder: "0x...", // Must be 0x format
         required: true,
       },
       {
         type: "select",
         label: "Target Chain",
-        options: ["BOB Sepolia", "BOB Mainnet"],
+        options: ["BOB Sepolia"],
         required: true,
       },
     ],
-    compatibleWith: ["create_intent", "swap_intent", "smart_contract"],
+    compatibleWith: ["create_intent"],
   },
   {
     id: "create_intent",

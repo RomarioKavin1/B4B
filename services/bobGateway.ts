@@ -1,92 +1,92 @@
-// services/bobGatewayService.ts
-import { GatewaySDK, GatewayQuoteParams } from "@gobob/bob-sdk";
+import { GatewaySDK, GatewayQuoteParams, GatewayQuote } from "@gobob/bob-sdk";
 import { parseUnits } from "viem";
-import { useSendGatewayTransaction } from "@gobob/sats-wagmi";
+import { useAccount, useSendGatewayTransaction } from "@gobob/sats-wagmi";
 import { useState, useMemo } from "react";
+
+// Initialize SDK with just the network name
+const sdk = new GatewaySDK("bob-sepolia");
 
 interface ExecutionResult {
   success: boolean;
-  txHash?: string;
   error?: string;
-  details?: any;
+  details?: {
+    uuid?: string;
+    psbtBase64?: string;
+    quote?: GatewayQuote;
+    targetToken?: string;
+  };
 }
-type BlockValues = Record<string, Record<string, string>>;
 
 export class BobGatewayService {
-  private sdk: GatewaySDK;
-
-  constructor() {
-    // Initialize with bob-sepolia for testnet
-    this.sdk = new GatewaySDK("bob-sepolia");
-  }
-
   private async createQuoteParams(
     values: Record<string, string>,
-    targetToken: string,
-    strategy?: any
+    fromBtcAddress: string
   ): Promise<GatewayQuoteParams> {
-    // Convert BTC amount to sats (1 BTC = 100,000,000 sats)
     const btcAmount = parseFloat(values.Amount || "0");
     const satsAmount = Math.floor(btcAmount * 100000000);
 
     console.log("Creating quote with values:", {
       btcAmount,
       satsAmount,
-      bobAddress: values["BOB Address"],
-      targetChain: values["Target Chain"],
+      fromBtcAddress,
+      toAddress: values["BOB Address"],
     });
 
-    const baseParams: GatewayQuoteParams = {
+    // Validate addresses
+    if (
+      !fromBtcAddress?.startsWith("tb1") &&
+      !fromBtcAddress?.startsWith("bc1")
+    ) {
+      throw new Error("Invalid Bitcoin sender address format");
+    }
+
+    if (!values["BOB Address"]?.startsWith("0x")) {
+      throw new Error("Invalid BOB address format - must start with 0x");
+    }
+
+    return {
       fromToken: "BTC",
       fromChain: "Bitcoin",
-      // fromUserAddress will be set by sats-wagmi
-      fromUserAddress: "",
-      toChain: "bob-sepolia", // Always use bob-sepolia for testnet
+      fromUserAddress: fromBtcAddress,
+      toChain: "bob-sepolia",
       toUserAddress: values["BOB Address"],
-      toToken: "tBTC", // Use tBTC for testnet
+      toToken: "tBTC",
       amount: satsAmount,
       gasRefill: 10000, // 0.0001 BTC for gas
     };
-
-    console.log("Created quote params:", baseParams);
-
-    return baseParams;
   }
 
   async executePath(
     blocks: BlockType[],
-    values: Record<string, Record<string, string>>
+    values: Record<string, Record<string, string>>,
+    fromBtcAddress: string
   ): Promise<ExecutionResult> {
     try {
-      const firstBlock = blocks[0];
       const firstBlockValues = values[`chain-0`] || {};
 
-      if (firstBlock.id !== "bridge_btc") {
-        throw new Error("First block must be Bridge BTC");
-      }
+      // Use SDK to get available tokens
+      const tokens = await sdk.getTokens();
+      console.log("Available tokens:", tokens);
 
-      // Get available tokens
-      const outputTokens = await this.sdk.getTokens();
-      console.log("Available tokens:", outputTokens);
+      // Find tBTC token details
+      const tbtcToken = tokens.find((t) => t.symbol === "tBTC");
+      if (!tbtcToken) {
+        throw new Error("tBTC token not found on BOB Sepolia");
+      }
 
       // Create quote parameters
       const quoteParams = await this.createQuoteParams(
         firstBlockValues,
-        "tBTC" // Always use tBTC for testnet
+        fromBtcAddress
       );
 
-      // Get quote
-      console.log("Getting quote with params:", quoteParams);
-      const quote = await this.sdk.getQuote(quoteParams);
-      console.log("Received quote:", quote);
+      // Use SDK to get quote
+      const quote = await sdk.getQuote(quoteParams);
+      console.log("Quote received:", quote);
 
-      // Start order
-      console.log("Starting order...");
-      const { uuid, psbtBase64 } = await this.sdk.startOrder(
-        quote,
-        quoteParams
-      );
-      console.log("Order started:", { uuid, psbtHasData: !!psbtBase64 });
+      // Use SDK to start order
+      const { uuid, psbtBase64 } = await sdk.startOrder(quote, quoteParams);
+      console.log("Order started:", { uuid, psbtBase64 });
 
       return {
         success: true,
@@ -117,36 +117,59 @@ export const useBobGateway = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const service = useMemo(() => new BobGatewayService(), []);
   const { sendGatewayTransaction } = useSendGatewayTransaction({
-    toChain: "bob-sepolia", // Always use bob-sepolia for testnet
+    toChain: "bob-sepolia",
   });
+  const { address: btcAddress } = useAccount();
 
   const executePath = async (
     blocks: BlockType[],
     values: Record<string, Record<string, string>>
-  ) => {
+  ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
     setIsExecuting(true);
 
     try {
-      console.log("Starting BOB Gateway execution...");
-      const result = await service.executePath(blocks, values);
+      if (!btcAddress) {
+        throw new Error("Please connect your Bitcoin wallet first");
+      }
+
+      console.log(
+        "Starting BOB Gateway execution with BTC address:",
+        btcAddress
+      );
+      const result = await service.executePath(blocks, values, btcAddress);
 
       if (!result.success || !result.details) {
         throw new Error(result.error || "Failed to prepare transaction");
       }
 
-      console.log("Sending gateway transaction...");
-      const txHash = await sendGatewayTransaction({
-        toToken: "tBTC", // Always use tBTC for testnet
-        evmAddress: values[`chain-0`]?.["BOB Address"] || "",
-        value: BigInt(result.details.quote.amount),
-      });
+      console.log("Sending gateway transaction with details:", result.details);
 
-      console.log("Transaction sent:", txHash);
+      try {
+        // Use sats-wagmi to send the transaction
+        const txResponse = await sendGatewayTransaction({
+          toToken: "tBTC",
+          evmAddress: values[`chain-0`]?.["BOB Address"] || "",
+          value: BigInt(result.details.quote?.satoshis || 0),
+        });
 
-      return {
-        success: true,
-        txHash: txHash as unknown as string,
-      };
+        // Handle the response based on sats-wagmi types
+        if (typeof txResponse === "string") {
+          console.log("Transaction sent with hash:", txResponse);
+          return {
+            success: true,
+            txHash: txResponse,
+          };
+        } else {
+          throw new Error("Invalid transaction response format");
+        }
+      } catch (txError) {
+        console.error("Transaction error:", txError);
+        throw new Error(
+          txError instanceof Error
+            ? txError.message
+            : "Failed to send transaction"
+        );
+      }
     } catch (error) {
       console.error("Execution error:", error);
       const errorMessage =
