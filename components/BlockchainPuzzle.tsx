@@ -129,9 +129,6 @@ const BlockchainPuzzle: React.FC = () => {
     <div className="min-h-screen bg-[#FFFDFA] p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-black text-black">
-            🧩 Blockchain Puzzle Builder
-          </h1>
           <p className="text-gray-600 font-medium text-lg">
             Drag and drop blocks to create your blockchain flow
           </p>
