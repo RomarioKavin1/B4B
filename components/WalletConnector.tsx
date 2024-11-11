@@ -90,7 +90,7 @@ const WalletConnector: React.FC = () => {
               bg-green-500/90 backdrop-blur-sm
               rounded-xl
               text-white
-              font-medium
+             font-extrabold
               text-sm
               border border-white/10
               shadow-lg
