@@ -6,6 +6,25 @@ import {
   FileCode,
   Send,
 } from "lucide-react";
+interface BlockType {
+  id: string;
+  name: string;
+  color: string;
+  icon: any;
+  description: string;
+  category: "intent" | "defi" | "privacy" | "ai" | "betting" | "bridge";
+  technology: "BOB Gateway" | "DeFi" | "Transaction"; // Add this field
+  inputs?: {
+    type: "number" | "text" | "address" | "select";
+    label: string;
+    placeholder?: string;
+    options?: string[];
+    required?: boolean;
+    unit?: string;
+  }[];
+  compatibleWith: string[];
+}
+
 export const blocks: BlockType[] = [
   {
     id: "bridge_btc",
@@ -14,6 +33,7 @@ export const blocks: BlockType[] = [
     icon: Coins,
     description: "Bridge native BTC to smart contracts",
     category: "bridge",
+    technology: "BOB Gateway", // Add technology group
     inputs: [
       {
         type: "number",
@@ -25,7 +45,7 @@ export const blocks: BlockType[] = [
       {
         type: "address",
         label: "BOB Address",
-        placeholder: "0x...", // Must be 0x format
+        placeholder: "0x...",
         required: true,
       },
       {
@@ -44,6 +64,7 @@ export const blocks: BlockType[] = [
     icon: Tag,
     description: "Create Bitcoin intent for transaction",
     category: "intent",
+    technology: "BOB Gateway",
     inputs: [
       {
         type: "select",
@@ -67,6 +88,7 @@ export const blocks: BlockType[] = [
     icon: ArrowRightLeft,
     description: "Create swap-specific intent",
     category: "intent",
+    technology: "DeFi",
     inputs: [
       {
         type: "text",
@@ -90,6 +112,7 @@ export const blocks: BlockType[] = [
     icon: BrainCircuit,
     description: "Verify intent parameters and conditions",
     category: "intent",
+    technology: "BOB Gateway",
     inputs: [
       {
         type: "select",
@@ -107,6 +130,7 @@ export const blocks: BlockType[] = [
     icon: CircuitBoard,
     description: "Execute the prepared Bitcoin intent",
     category: "intent",
+    technology: "BOB Gateway",
     inputs: [
       {
         type: "select",
@@ -124,6 +148,7 @@ export const blocks: BlockType[] = [
     icon: FileCode,
     description: "Interact with smart contract",
     category: "defi",
+    technology: "DeFi",
     inputs: [
       {
         type: "text",
@@ -147,6 +172,7 @@ export const blocks: BlockType[] = [
     icon: Send,
     description: "Submit the transaction",
     category: "bridge",
+    technology: "Transaction",
     inputs: [
       {
         type: "select",
@@ -158,3 +184,13 @@ export const blocks: BlockType[] = [
     compatibleWith: [],
   },
 ];
+
+// Helper function to get blocks by technology
+export const getBlocksByTechnology = (technology: BlockType["technology"]) => {
+  return blocks.filter((block) => block.technology === technology);
+};
+
+// Helper function to get all available technologies
+export const getAvailableTechnologies = (): BlockType["technology"][] => {
+  return Array.from(new Set(blocks.map((block) => block.technology)));
+};

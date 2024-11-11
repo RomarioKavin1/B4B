@@ -1,5 +1,9 @@
-import { blocks } from "@/constants/paths";
-import { RotateCcw } from "lucide-react";
+import {
+  blocks,
+  getAvailableTechnologies,
+  getBlocksByTechnology,
+} from "@/constants/paths";
+import { Folder, RotateCcw } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import PuzzlePiece from "./PuzzlePiece";
 import TransactionFlowVisualizer from "./TrasnactionFlowVisualiser";
@@ -7,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@radix-ui/react-tabs";
 
 const ScrollButtons: React.FC<{
   scrollRef: React.RefObject<HTMLDivElement>;
@@ -97,6 +102,66 @@ const ScrollableArea: React.FC<{
   );
 };
 
+const AvailablePieces: React.FC<{
+  onDragStart: (block: BlockType) => () => void;
+}> = ({ onDragStart }) => {
+  const technologies = getAvailableTechnologies();
+
+  return (
+    <Card className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
+      <CardHeader>
+        <CardTitle className="text-black font-bold text-2xl">
+          Available Pieces
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue={technologies[0]} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 gap-4 bg-transparent">
+            {technologies.map((tech) => (
+              <TabsTrigger
+                key={tech}
+                value={tech}
+                className={cn(
+                  "border-2 border-black rounded-xl",
+                  "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+                  "hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                  "hover:translate-y-[-2px]",
+                  "transition-all duration-200",
+                  "data-[state=active]:bg-black data-[state=active]:text-white",
+                  "flex items-center gap-2",
+                  "p-2"
+                )}
+              >
+                <Folder size={16} />
+                {tech}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {technologies.map((tech) => (
+            <TabsContent
+              key={tech}
+              value={tech}
+              className="mt-6 border-2 border-black rounded-xl p-4"
+            >
+              <ScrollableArea>
+                <div className="flex gap-6">
+                  {getBlocksByTechnology(tech).map((block) => (
+                    <div key={block.id} className="flex-shrink-0">
+                      <PuzzlePiece
+                        block={block}
+                        onDragStart={onDragStart(block)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </ScrollableArea>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+};
 const BlockchainPuzzle: React.FC = () => {
   const [chainBlocks, setChainBlocks] = useState<BlockType[]>([]);
   const [draggedBlock, setDraggedBlock] = useState<BlockType | null>(null);
@@ -162,26 +227,7 @@ const BlockchainPuzzle: React.FC = () => {
         </div>
 
         {/* Available Pieces with Scroll Buttons */}
-        <Card className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-black font-bold text-2xl">
-              Available Pieces
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollableArea className="border-2 border-black p-4">
-              {blocks.map((block) => (
-                <div className="flex-shrink-0" key={block.id}>
-                  <PuzzlePiece
-                    block={block}
-                    onDragStart={handleDragStart(block)}
-                  />
-                </div>
-              ))}
-            </ScrollableArea>
-          </CardContent>
-        </Card>
-
+        <AvailablePieces onDragStart={handleDragStart} />
         {/* Building Area with Scroll Buttons */}
         <Card
           className="bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_rgba(0,0,0,1)] hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)] hover:translate-y-[-2px] transition-all duration-300"
