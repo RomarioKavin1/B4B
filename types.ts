@@ -2,7 +2,7 @@ interface BlockType {
   id: string;
   name: string;
   color: string;
-  icon: any;
+  icon: React.ElementType;
   description: string;
   compatibleWith: string[];
   inputs?: {
@@ -15,4 +15,20 @@ interface BlockType {
   }[];
   category: "intent" | "defi" | "privacy" | "ai" | "betting" | "bridge";
   outputDescription?: string;
+}
+
+interface BlockValues {
+  [key: string]: {
+    [key: string]: string;
+  };
+}
+
+interface GasEstimates {
+  totalGas: number;
+  totalTime: number;
+}
+
+interface TransactionFlowVisualizerProps {
+  blocks: BlockType[];
+  values: BlockValues;
 }
