@@ -5,7 +5,65 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import ExecuteButton from "./ExecuteButton";
+import TransactionDetails from "./TransactionDetails";
+import { useAccount } from "@gobob/sats-wagmi";
+import PSBTPreview from "./PSBTPreview";
+export interface PSBTInput {
+  nonWitnessUtxo: {
+    version: number;
+    segwitFlag: boolean;
+    inputs: Array<{
+      txid: string;
+      index: number;
+      finalScriptSig: string;
+      sequence: number;
+    }>;
+    outputs: Array<{
+      amount: string;
+      script: string;
+    }>;
+    witnesses: Array<string[]>;
+    lockTime: number;
+  };
+  witnessUtxo: {
+    amount: string;
+    script: string;
+  };
+}
 
+export interface PSBTData {
+  value: {
+    global: {
+      unsignedTx: {
+        version: number;
+        inputs: Array<{
+          txid: string;
+          index: number;
+          finalScriptSig: string;
+          sequence: number;
+        }>;
+        outputs: Array<{
+          amount: string;
+          script: string;
+        }>;
+        lockTime: number;
+      };
+    };
+    inputs: PSBTInput[];
+    outputs: Record<string, unknown>[];
+  };
+}
+
+interface Log {
+  message: string;
+  timestamp: Date;
+  type: "info" | "success" | "error";
+}
+
+interface TransactionFlowVisualizerProps {
+  blocks: BlockType[];
+  values: Record<string, Record<string, string>>;
+}
 interface Log {
   message: string;
   timestamp: Date;
@@ -21,7 +79,9 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
   blocks,
   values,
 }) => {
+  const { address: btcAddress } = useAccount();
   const [logs, setLogs] = useState<Log[]>([]);
+  const [currentPSBT, setCurrentPSBT] = useState<PSBTData | null>(null);
 
   const addLog = (
     message: string,
@@ -29,7 +89,6 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
   ) => {
     setLogs((prev) => [...prev, { message, timestamp: new Date(), type }]);
   };
-
   const renderBlockValues = (blockIndex: number) => {
     const blockValue = values[`chain-${blockIndex}`];
     if (!blockValue) return null;
@@ -74,7 +133,6 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
       type: "success",
     };
   };
-
   return (
     <div className="space-y-6">
       {blocks.length > 0 && (
@@ -163,7 +221,16 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
               </CardContent>
             </Card>
           </div>
-
+          {blocks[0]?.technology === "BOB Gateway" && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Transaction Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PSBTPreview values={values} btcAddress={btcAddress || ""} />
+              </CardContent>
+            </Card>
+          )}
           <Card
             className={cn(
               "border-2 border-black rounded-xl",
@@ -175,7 +242,35 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
           >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Transaction Flow</CardTitle>
-              <ExecuteButton blocks={blocks} values={values} onLog={addLog} />
+              <ExecuteButton
+                blocks={blocks}
+                values={values}
+                onLog={(message, type) => {
+                  addLog(message, type);
+                  if (message.includes("Signing PSBT")) {
+                    try {
+                      const psbtData: PSBTData = JSON.parse(
+                        message.split("Signing PSBT: ")[1]
+                      );
+                      setCurrentPSBT(psbtData);
+                    } catch (e) {
+                      console.error("Failed to parse PSBT data:", e);
+                      addLog("Failed to parse PSBT data", "error");
+                    }
+                  }
+                }}
+              />
+
+              {currentPSBT && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>Transaction Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <TransactionDetails psbtData={currentPSBT} />
+                  </CardContent>
+                </Card>
+              )}
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-4">
@@ -198,7 +293,16 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
               </div>
             </CardContent>
           </Card>
-
+          {currentPSBT && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle>Transaction Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TransactionDetails psbtData={currentPSBT} />
+              </CardContent>
+            </Card>
+          )}
           <Alert
             className={cn(
               "border-2 border-black rounded-xl",
