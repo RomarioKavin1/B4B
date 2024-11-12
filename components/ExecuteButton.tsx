@@ -1,32 +1,29 @@
+// ExecuteButton.tsx
 import React from "react";
 import { Play, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useBobGateway } from "@/services/bobGateway";
-import { useGlittr } from "@/services/glittr";
 import { useAccount } from "@gobob/sats-wagmi";
 import { cn } from "@/lib/utils";
 
-const ExecuteButton: React.FC<{
+interface ExecuteButtonProps {
   blocks: BlockType[];
   values: Record<string, Record<string, string>>;
-}> = ({ blocks, values }) => {
-  const bobGateway = useBobGateway();
-  const glittrService = useGlittr();
+  onLog?: (message: string, type: "info" | "success" | "error") => void;
+}
+
+const ExecuteButton: React.FC<ExecuteButtonProps> = ({
+  blocks,
+  values,
+  onLog,
+}) => {
+  const { executePath, isExecuting } = useBobGateway();
   const { address: btcAddress } = useAccount();
-
-  const getServiceType = (blocks: BlockType[]): "bob" | "glittr" => {
-    const firstBlock = blocks[0];
-    return firstBlock?.technology === "Glittr" ? "glittr" : "bob";
-  };
-
-  const isExecuting =
-    getServiceType(blocks) === "glittr"
-      ? glittrService.isExecuting
-      : bobGateway.isExecuting;
 
   const handleExecute = async () => {
     if (!btcAddress) {
+      onLog?.("Wallet not connected", "error");
       toast({
         title: "Wallet Not Connected",
         description: "Please connect your Bitcoin wallet first",
@@ -36,97 +33,62 @@ const ExecuteButton: React.FC<{
     }
 
     try {
-      const serviceType = getServiceType(blocks);
-      console.log("Executing with service:", serviceType, "blocks:", blocks);
+      onLog?.(`Starting execution with address: ${btcAddress}`, "info");
+      const result = await executePath(blocks, values);
 
-      let result;
-
-      if (serviceType === "glittr") {
-        result = await glittrService.executePath(blocks, values);
-        if (result.success) {
-          toast({
-            title: "Contract Created!",
-            description: (
-              <div className="mt-2 space-y-2">
-                <p>Your Glittr contract has been deployed successfully.</p>
-                {result.txid && (
-                  <p className="font-mono text-xs break-all">
-                    Transaction ID: {result.txid}
-                  </p>
-                )}
+      if (result.insufficientFunds) {
+        onLog?.(
+          `Insufficient funds - Required: ${result.requiredAmount} BTC, Available: ${result.balance} BTC`,
+          "error"
+        );
+        toast({
+          title: "Insufficient Balance",
+          description: (
+            <div className="mt-2 space-y-2">
+              <div className="text-sm font-mono mt-1 space-y-1">
+                <p>Required: {result.requiredAmount?.toFixed(8)} BTC</p>
+                <p>Available: {result.balance?.toFixed(8)} BTC</p>
               </div>
-            ),
-          });
-        }
-      } else {
-        result = await bobGateway.executePath(blocks, values);
-        if (result.success) {
-          toast({
-            title: "Transaction Submitted!",
-            description: (
-              <div className="mt-2 space-y-2">
-                <p>Your transaction has been submitted to BOB Gateway.</p>
-                {result.txHash && (
-                  <p className="font-mono text-xs break-all">
-                    Hash: {result.txHash}
-                  </p>
-                )}
-              </div>
-            ),
-          });
-        }
+            </div>
+          ),
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (!result.success) {
+      if (result.success) {
+        onLog?.(`Transaction submitted with hash: ${result.txHash}`, "success");
         toast({
-          title:
-            serviceType === "glittr"
-              ? "Contract Creation Failed"
-              : "Transaction Failed",
+          title: "Transaction Submitted!",
+          description: (
+            <div className="mt-2 space-y-2">
+              <p>Your transaction has been submitted successfully.</p>
+              {result.txHash && (
+                <p className="font-mono text-xs break-all">
+                  Hash: {result.txHash}
+                </p>
+              )}
+            </div>
+          ),
+        });
+      } else {
+        onLog?.(`Transaction failed: ${result.error}`, "error");
+        toast({
+          title: "Transaction Failed",
           description: result.error || "Unknown error occurred",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Execution error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred";
+      onLog?.(`Execution error: ${errorMessage}`, "error");
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
     }
-  };
-
-  const getButtonText = () => {
-    if (!btcAddress) {
-      return (
-        <>
-          <Wallet size={20} />
-          Connect Wallet
-        </>
-      );
-    }
-
-    if (isExecuting) {
-      return (
-        <>
-          <Loader2 size={20} className="animate-spin" />
-          {getServiceType(blocks) === "glittr"
-            ? "Deploying..."
-            : "Processing..."}
-        </>
-      );
-    }
-
-    const serviceType = getServiceType(blocks);
-    return (
-      <>
-        <Play size={20} />
-        {serviceType === "glittr" ? "Deploy Contract" : "Execute Flow"}
-      </>
-    );
   };
 
   return (
@@ -144,7 +106,22 @@ const ExecuteButton: React.FC<{
         (!btcAddress || isExecuting) && "opacity-50 cursor-not-allowed"
       )}
     >
-      {getButtonText()}
+      {!btcAddress ? (
+        <>
+          <Wallet size={20} />
+          Connect Wallet
+        </>
+      ) : isExecuting ? (
+        <>
+          <Loader2 size={20} className="animate-spin" />
+          Processing...
+        </>
+      ) : (
+        <>
+          <Play size={20} />
+          Execute Flow
+        </>
+      )}
     </Button>
   );
 };

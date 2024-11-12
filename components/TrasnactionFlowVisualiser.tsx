@@ -1,53 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRightLeft, AlertCircle } from "lucide-react";
+import { ArrowRightLeft, AlertCircle, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import ExecuteButton from "./ExecuteButton";
+
+interface Log {
+  message: string;
+  timestamp: Date;
+  type: "info" | "success" | "error";
+}
 
 interface TransactionFlowVisualizerProps {
   blocks: BlockType[];
   values: Record<string, Record<string, string>>;
 }
 
-// const calculateEstimates = (
-//   blocks: BlockType[]
-// ): { totalGas: number; totalTime: number } => {
-//   const estimates = blocks.reduce(
-//     (acc, block) => {
-//       switch (block.category) {
-//         case "bridge":
-//           return {
-//             totalGas: acc.totalGas + 0.005,
-//             totalTime: acc.totalTime + 15,
-//           };
-//         case "intent":
-//           return {
-//             totalGas: acc.totalGas + 0.002,
-//             totalTime: acc.totalTime + 5,
-//           };
-//         case "defi":
-//           return {
-//             totalGas: acc.totalGas + 0.003,
-//             totalTime: acc.totalTime + 3,
-//           };
-//         default:
-//           return {
-//             totalGas: acc.totalGas + 0.001,
-//             totalTime: acc.totalTime + 1,
-//           };
-//       }
-//     },
-//     { totalGas: 0, totalTime: 0 }
-//   );
-
-//   return estimates;
-// };
-
 const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
   blocks,
   values,
 }) => {
-  // const { totalGas, totalTime } = calculateEstimates(blocks);
+  const [logs, setLogs] = useState<Log[]>([]);
+
+  const addLog = (
+    message: string,
+    type: "info" | "success" | "error" = "info"
+  ) => {
+    setLogs((prev) => [...prev, { message, timestamp: new Date(), type }]);
+  };
 
   const renderBlockValues = (blockIndex: number) => {
     const blockValue = values[`chain-${blockIndex}`];
@@ -99,7 +80,15 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
       {blocks.length > 0 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card
+              className={cn(
+                "border-2 border-black rounded-xl",
+                "shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                "hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)]",
+                "hover:translate-y-[-2px]",
+                "transition-all duration-300"
+              )}
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Steps</CardTitle>
               </CardHeader>
@@ -110,36 +99,83 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
                 </p>
               </CardContent>
             </Card>
-            {/* <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Est. Gas</CardTitle>
+
+            {/* Transaction Logs Card */}
+            <Card
+              className={cn(
+                "border-2 border-black rounded-xl col-span-2",
+                "shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                "hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)]",
+                "hover:translate-y-[-2px]",
+                "transition-all duration-300"
+              )}
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Transaction Logs
+                </CardTitle>
+                {logs.length > 0 && (
+                  <button
+                    onClick={() => setLogs([])}
+                    className={cn(
+                      "px-2 py-1 text-xs",
+                      "bg-white border-2 border-black rounded-lg",
+                      "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+                      "hover:shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+                      "hover:translate-y-[-2px]",
+                      "transition-all duration-200",
+                      "flex items-center gap-1"
+                    )}
+                  >
+                    <RotateCcw size={12} />
+                    Clear
+                  </button>
+                )}
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {totalGas.toFixed(3)} ETH
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Estimated total gas fees
-                </p>
+                <ScrollArea className="h-24 w-full rounded-lg border-2 border-black p-2">
+                  {logs.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                      No transaction logs yet
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {logs.map((log, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            "font-mono text-xs p-2 rounded border-2 border-black",
+                            "shadow-[2px_2px_0_0_rgba(0,0,0,1)]",
+                            log.type === "error" && "bg-red-50",
+                            log.type === "success" && "bg-green-50",
+                            log.type === "info" && "bg-blue-50"
+                          )}
+                        >
+                          <span className="text-gray-500">
+                            [{log.timestamp.toLocaleTimeString()}]
+                          </span>{" "}
+                          {log.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Est. Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalTime} min</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Estimated completion time
-                </p>
-              </CardContent>
-            </Card> */}
           </div>
 
-          <Card>
+          <Card
+            className={cn(
+              "border-2 border-black rounded-xl",
+              "shadow-[4px_4px_0_0_rgba(0,0,0,1)]",
+              "hover:shadow-[6px_6px_0_0_rgba(0,0,0,1)]",
+              "hover:translate-y-[-2px]",
+              "transition-all duration-300"
+            )}
+          >
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Transaction Flow</CardTitle>
-              <ExecuteButton blocks={blocks} values={values} />
+              <ExecuteButton blocks={blocks} values={values} onLog={addLog} />
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-4">
@@ -163,7 +199,12 @@ const TransactionFlowVisualizer: React.FC<TransactionFlowVisualizerProps> = ({
             </CardContent>
           </Card>
 
-          <Alert>
+          <Alert
+            className={cn(
+              "border-2 border-black rounded-xl",
+              "shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+            )}
+          >
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{getFlowStatus(blocks).message}</AlertDescription>
           </Alert>

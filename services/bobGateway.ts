@@ -13,55 +13,43 @@ interface ExecutionResult {
     psbtBase64?: string;
     quote?: GatewayQuote;
     targetToken?: string;
+    balance?: number;
+    requiredAmount?: number;
+    insufficientFunds?: boolean;
   };
 }
 
 export class BobGatewayService {
+  private async checkBalance(btcAddress: string): Promise<number> {
+    try {
+      const response = await fetch(
+        `https://mempool.space/testnet/api/address/${btcAddress}`
+      );
+      const data = await response.json();
+      const balance =
+        data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+      return balance / 100000000;
+    } catch (error) {
+      console.error("Failed to check balance:", error);
+      return 0;
+    }
+  }
+
   private async createQuoteParams(
     values: Record<string, string>,
-    fromBtcAddress: string
-  ): Promise<GatewayQuoteParams> {
+    fromBtcAddress: string,
+    currentBalance: number
+  ): Promise<{
+    params: GatewayQuoteParams;
+    insufficientFunds: boolean;
+    requiredAmount: number;
+  }> {
     const btcAmount = parseFloat(values.Amount || "0");
     const satsAmount = Math.floor(btcAmount * 100000000);
+    const bobAddress = values["BOB Address"];
 
-    // Add more detailed logging
-    console.log("Creating quote parameters:", {
-      amount: btcAmount,
-      satsAmount,
-      fromBtcAddress,
-      toAddress: values["BOB Address"],
-      fullValues: values,
-    });
-
-    // Validate amount
-    if (isNaN(btcAmount) || btcAmount <= 0) {
-      throw new Error(`Invalid BTC amount: ${values.Amount}`);
-    }
-
-    if (satsAmount < 1000) {
-      throw new Error(
-        `Amount too small: ${satsAmount} sats (minimum 1000 sats)`
-      );
-    }
-
-    // Validate addresses with detailed errors
-    if (!fromBtcAddress) {
-      throw new Error("Bitcoin address is missing");
-    }
-
-    if (
-      !fromBtcAddress.startsWith("tb1") &&
-      !fromBtcAddress.startsWith("bc1")
-    ) {
-      throw new Error(`Invalid Bitcoin address format: ${fromBtcAddress}`);
-    }
-
-    if (!values["BOB Address"]) {
-      throw new Error("BOB address is missing");
-    }
-
-    if (!values["BOB Address"].startsWith("0x")) {
-      throw new Error(`Invalid BOB address format: ${values["BOB Address"]}`);
+    if (!bobAddress) {
+      throw new Error("BOB Address is required");
     }
 
     const quoteParams: GatewayQuoteParams = {
@@ -69,15 +57,18 @@ export class BobGatewayService {
       fromChain: "Bitcoin",
       fromUserAddress: fromBtcAddress,
       toChain: "bob-sepolia",
-      toUserAddress: values["BOB Address"],
+      toUserAddress: bobAddress,
       toToken: "tBTC",
       amount: satsAmount,
-      gasRefill: 10000,
+      gasRefill: currentBalance < btcAmount ? 1000 : 10000,
+      feeRate: 2,
     };
 
-    // Log final params
-    console.log("Final quote parameters:", quoteParams);
-    return quoteParams;
+    return {
+      params: quoteParams,
+      insufficientFunds: currentBalance < btcAmount,
+      requiredAmount: btcAmount,
+    };
   }
 
   async executePath(
@@ -87,80 +78,90 @@ export class BobGatewayService {
   ): Promise<ExecutionResult> {
     try {
       const firstBlockValues = values[`chain-0`] || {};
-      console.log("Starting execution with values:", {
+
+      // Validate inputs first
+      if (!fromBtcAddress) {
+        return {
+          success: false,
+          error: "Bitcoin address is required",
+        };
+      }
+
+      if (!firstBlockValues["BOB Address"]) {
+        return {
+          success: false,
+          error: "BOB address is required",
+        };
+      }
+
+      // Validate address formats
+      if (
+        !fromBtcAddress.startsWith("tb1") &&
+        !fromBtcAddress.startsWith("bc1")
+      ) {
+        return {
+          success: false,
+          error:
+            "Invalid Bitcoin sender address format - must start with tb1 or bc1",
+        };
+      }
+
+      if (!firstBlockValues["BOB Address"].startsWith("0x")) {
+        return {
+          success: false,
+          error: "Invalid BOB address format - must start with 0x",
+        };
+      }
+
+      const currentBalance = await this.checkBalance(fromBtcAddress);
+      console.log("Current balance:", currentBalance, "BTC");
+
+      const {
+        params: quoteParams,
+        insufficientFunds,
+        requiredAmount,
+      } = await this.createQuoteParams(
         firstBlockValues,
         fromBtcAddress,
-      });
+        currentBalance
+      );
 
-      // 1. Get tokens and validate
-      let tokens;
-      try {
-        tokens = await sdk.getTokens();
-        console.log("Available tokens:", tokens);
-      } catch (error) {
-        console.error("Failed to fetch tokens:", error);
-        throw new Error("Unable to fetch available tokens. Please try again.");
+      if (insufficientFunds) {
+        return {
+          success: false,
+          error: "Insufficient funds",
+          details: {
+            balance: currentBalance,
+            requiredAmount,
+            insufficientFunds: true,
+          },
+        };
       }
 
+      // Get tokens and validate
+      const tokens = await sdk.getTokens();
       const tbtcToken = tokens.find((t) => t.symbol === "tBTC");
       if (!tbtcToken) {
-        throw new Error("tBTC token not found in available tokens list");
+        return {
+          success: false,
+          error: "tBTC token not found on BOB Sepolia",
+        };
       }
 
-      // 2. Create quote parameters
-      let quoteParams;
-      try {
-        quoteParams = await this.createQuoteParams(
-          firstBlockValues,
-          fromBtcAddress
-        );
-      } catch (error) {
-        console.error("Failed to create quote parameters:", error);
-        throw error;
-      }
+      // Get quote
+      const quote = await sdk.getQuote(quoteParams);
+      console.log("Quote received:", quote);
 
-      // 3. Get quote with validation
-      let quote;
-      try {
-        quote = await sdk.getQuote(quoteParams);
-        console.log("Quote received:", quote);
+      // Start order
+      console.log("Starting order with quote:", quote);
+      console.log("Quote params:", quoteParams);
+      const orderDetails = await sdk.startOrder(quote, quoteParams);
 
-        // Validate quote response
-        if (!quote.satoshis || quote.satoshis <= 0) {
-          throw new Error(
-            `Invalid satoshis amount in quote: ${quote.satoshis}`
-          );
-        }
-        if (!quote.bitcoinAddress) {
-          throw new Error("Missing bitcoin address in quote");
-        }
-      } catch (error) {
-        console.error("Failed to get quote:", error);
-        throw new Error("Failed to get quote from gateway. Please try again.");
-      }
-
-      // 4. Start order with detailed error handling
-      let orderDetails;
-      try {
-        console.log("Starting order with:", {
-          quote,
-          quoteParams,
-        });
-
-        orderDetails = await sdk.startOrder(quote, quoteParams);
-        console.log("Order started:", orderDetails);
-
-        if (!orderDetails.uuid || !orderDetails.psbtBase64) {
-          throw new Error("Incomplete order details received");
-        }
-      } catch (error) {
-        console.error("Failed to start order:", error);
-        if (error instanceof Error && error.message.includes("500")) {
-          throw new Error(
-            "Gateway service error. Please try again in a few minutes."
-          );
-        }
-        throw new Error("Failed to start order. Please try again.");
+      if (!orderDetails.uuid || !orderDetails.psbtBase64) {
+        return {
+          success: false,
+          error: "Failed to get complete order details from gateway",
+        };
       }
 
       return {
@@ -170,6 +171,8 @@ export class BobGatewayService {
           psbtBase64: orderDetails.psbtBase64,
           quote,
           targetToken: "tBTC",
+          balance: currentBalance,
+          requiredAmount,
         },
       };
     } catch (error) {
@@ -181,6 +184,16 @@ export class BobGatewayService {
       };
     }
   }
+
+  async finalizeOrder(uuid: string, bitcoinTxHex: string): Promise<boolean> {
+    try {
+      await sdk.finalizeOrder(uuid, bitcoinTxHex);
+      return true;
+    } catch (error) {
+      console.error("Failed to finalize order:", error);
+      return false;
+    }
+  }
 }
 
 export function useBobGateway() {
@@ -189,25 +202,72 @@ export function useBobGateway() {
   const { sendGatewayTransaction } = useSendGatewayTransaction({
     toChain: "bob-sepolia",
   });
-  const { address: btcAddress } = useAccount();
+  const { address: btcAddress, connector } = useAccount();
 
   const executePath = async (
     blocks: BlockType[],
     values: Record<string, Record<string, string>>
-  ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  ): Promise<{
+    success: boolean;
+    txHash?: string;
+    error?: string;
+    balance?: number;
+    requiredAmount?: number;
+    insufficientFunds?: boolean;
+  }> => {
     setIsExecuting(true);
 
     try {
-      if (!btcAddress) {
-        throw new Error("Please connect your Bitcoin wallet first");
+      if (!btcAddress || !connector) {
+        return {
+          success: false,
+          error: "Please connect your Bitcoin wallet first",
+        };
       }
 
       const result = await service.executePath(blocks, values, btcAddress);
 
-      if (!result.success || !result.details) {
-        throw new Error(result.error || "Failed to prepare transaction");
+      if (result.details?.insufficientFunds) {
+        return {
+          success: false,
+          error: `Insufficient funds. Required: ${result.details.requiredAmount} BTC, Available: ${result.details.balance} BTC`,
+          balance: result.details.balance,
+          requiredAmount: result.details.requiredAmount,
+          insufficientFunds: true,
+        };
       }
 
+      if (
+        !result.success ||
+        !result.details?.uuid ||
+        !result.details?.psbtBase64
+      ) {
+        return {
+          success: false,
+          error: result.error || "Failed to prepare transaction",
+        };
+      }
+
+      // Sign the PSBT
+      console.log("Signing PSBT...");
+      const bitcoinTxHex = await connector.signAllInputs(
+        result.details.psbtBase64
+      );
+
+      // Finalize the order
+      console.log("Finalizing order...");
+      const finalized = await service.finalizeOrder(
+        result.details.uuid,
+        bitcoinTxHex
+      );
+      if (!finalized) {
+        return {
+          success: false,
+          error: "Failed to finalize order",
+        };
+      }
+
+      // Send gateway transaction
       const txResponse = await sendGatewayTransaction({
         toToken: "tBTC",
         evmAddress: values[`chain-0`]?.["BOB Address"] || "",
@@ -215,9 +275,15 @@ export function useBobGateway() {
       });
 
       if (typeof txResponse === "string") {
-        return { success: true, txHash: txResponse };
+        return {
+          success: true,
+          txHash: txResponse,
+        };
       } else {
-        throw new Error("Invalid transaction response format");
+        return {
+          success: false,
+          error: "Invalid transaction response format",
+        };
       }
     } catch (error) {
       console.error("Execution error:", error);

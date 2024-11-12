@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@dynamic-labs/ethereum": "^3.6.1",
+    "@dynamic-labs/sdk-react-core": "^3.6.1",
     "@glittr-sdk/sdk": "^0.17.0",
     "@gobob/bob-sdk": "^3.0.3",
     "@gobob/sats-wagmi": "^0.3.16",
