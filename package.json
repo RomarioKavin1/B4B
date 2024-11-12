@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@glittr-sdk/sdk": "^0.17.0",
     "@gobob/bob-sdk": "^3.0.3",
     "@gobob/sats-wagmi": "^0.3.16",
     "@radix-ui/react-dropdown-menu": "^2.1.2",

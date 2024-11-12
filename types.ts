@@ -2,9 +2,19 @@ interface BlockType {
   id: string;
   name: string;
   color: string;
-  icon: React.ElementType;
+  icon: any;
   description: string;
-  compatibleWith: string[];
+  category:
+    | "intent"
+    | "defi"
+    | "privacy"
+    | "ai"
+    | "betting"
+    | "bridge"
+    | "contract"
+    | "validation"
+    | "execution"; // Add this field
+  technology: "BOB Gateway" | "DeFi" | "Transaction" | "Glittr"; // Add this field
   inputs?: {
     type: "number" | "text" | "address" | "select";
     label: string;
@@ -13,8 +23,7 @@ interface BlockType {
     required?: boolean;
     unit?: string;
   }[];
-  category: "intent" | "defi" | "privacy" | "ai" | "betting" | "bridge";
-  outputDescription?: string;
+  compatibleWith: string[];
 }
 
 interface BlockValues {

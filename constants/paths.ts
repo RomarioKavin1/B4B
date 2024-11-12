@@ -1,4 +1,4 @@
-import { Tag, Coins, Lock } from "lucide-react";
+import { Tag, Coins, Lock, Check } from "lucide-react";
 import {
   ArrowRightLeft,
   BrainCircuit,
@@ -6,14 +6,25 @@ import {
   FileCode,
   Send,
 } from "lucide-react";
+import { Network } from "@glittr-sdk/sdk";
+
 interface BlockType {
   id: string;
   name: string;
   color: string;
   icon: any;
   description: string;
-  category: "intent" | "defi" | "privacy" | "ai" | "betting" | "bridge";
-  technology: "BOB Gateway" | "DeFi" | "Transaction"; // Add this field
+  category:
+    | "intent"
+    | "defi"
+    | "privacy"
+    | "ai"
+    | "betting"
+    | "bridge"
+    | "contract"
+    | "validation"
+    | "execution"; // Add this field
+  technology: "BOB Gateway" | "DeFi" | "Transaction" | "Glittr"; // Add this field
   inputs?: {
     type: "number" | "text" | "address" | "select";
     label: string;
@@ -21,6 +32,7 @@ interface BlockType {
     options?: string[];
     required?: boolean;
     unit?: string;
+    defaultValue?: string;
   }[];
   compatibleWith: string[];
 }
@@ -182,6 +194,49 @@ export const blocks: BlockType[] = [
       },
     ],
     compatibleWith: [],
+  },
+  {
+    id: "glittr_contract",
+    name: "Create Contract",
+    color: "from-blue-400 to-blue-600",
+    icon: FileCode,
+    description: "Create a new Glittr contract",
+    category: "contract",
+    technology: "Glittr",
+    inputs: [
+      {
+        type: "text",
+        label: "WIF",
+        placeholder: "Private key in WIF format",
+        required: true,
+      },
+      {
+        type: "select",
+        label: "Network",
+        options: ["regtest", "testnet", "mainnet"],
+        required: true,
+        defaultValue: "regtest",
+      },
+      {
+        type: "number",
+        label: "Supply Cap",
+        placeholder: "2000",
+        required: true,
+      },
+      {
+        type: "number",
+        label: "Divisibility",
+        placeholder: "18",
+        required: true,
+      },
+      {
+        type: "number",
+        label: "Amount Per Mint",
+        placeholder: "2",
+        required: true,
+      },
+    ],
+    compatibleWith: ["glittr_validate"],
   },
 ];
 

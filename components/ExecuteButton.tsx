@@ -3,6 +3,7 @@ import { Play, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useBobGateway } from "@/services/bobGateway";
+import { useGlittr } from "@/services/glittr";
 import { useAccount } from "@gobob/sats-wagmi";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +11,19 @@ const ExecuteButton: React.FC<{
   blocks: BlockType[];
   values: Record<string, Record<string, string>>;
 }> = ({ blocks, values }) => {
-  const { executePath, isExecuting } = useBobGateway();
+  const bobGateway = useBobGateway();
+  const glittrService = useGlittr();
   const { address: btcAddress } = useAccount();
+
+  const getServiceType = (blocks: BlockType[]): "bob" | "glittr" => {
+    const firstBlock = blocks[0];
+    return firstBlock?.technology === "Glittr" ? "glittr" : "bob";
+  };
+
+  const isExecuting =
+    getServiceType(blocks) === "glittr"
+      ? glittrService.isExecuting
+      : bobGateway.isExecuting;
 
   const handleExecute = async () => {
     if (!btcAddress) {
@@ -24,26 +36,53 @@ const ExecuteButton: React.FC<{
     }
 
     try {
-      console.log("Starting execution with BTC address:", btcAddress);
-      const result = await executePath(blocks, values);
+      const serviceType = getServiceType(blocks);
+      console.log("Executing with service:", serviceType, "blocks:", blocks);
 
-      if (result.success) {
-        toast({
-          title: "Transaction Submitted!",
-          description: (
-            <div className="mt-2 space-y-2">
-              <p>Your transaction has been submitted to BOB Gateway.</p>
-              {result.txHash && (
-                <p className="font-mono text-xs break-all">
-                  Hash: {result.txHash}
-                </p>
-              )}
-            </div>
-          ),
-        });
+      let result;
+
+      if (serviceType === "glittr") {
+        result = await glittrService.executePath(blocks, values);
+        if (result.success) {
+          toast({
+            title: "Contract Created!",
+            description: (
+              <div className="mt-2 space-y-2">
+                <p>Your Glittr contract has been deployed successfully.</p>
+                {result.txid && (
+                  <p className="font-mono text-xs break-all">
+                    Transaction ID: {result.txid}
+                  </p>
+                )}
+              </div>
+            ),
+          });
+        }
       } else {
+        result = await bobGateway.executePath(blocks, values);
+        if (result.success) {
+          toast({
+            title: "Transaction Submitted!",
+            description: (
+              <div className="mt-2 space-y-2">
+                <p>Your transaction has been submitted to BOB Gateway.</p>
+                {result.txHash && (
+                  <p className="font-mono text-xs break-all">
+                    Hash: {result.txHash}
+                  </p>
+                )}
+              </div>
+            ),
+          });
+        }
+      }
+
+      if (!result.success) {
         toast({
-          title: "Transaction Failed",
+          title:
+            serviceType === "glittr"
+              ? "Contract Creation Failed"
+              : "Transaction Failed",
           description: result.error || "Unknown error occurred",
           variant: "destructive",
         });
@@ -58,6 +97,36 @@ const ExecuteButton: React.FC<{
         variant: "destructive",
       });
     }
+  };
+
+  const getButtonText = () => {
+    if (!btcAddress) {
+      return (
+        <>
+          <Wallet size={20} />
+          Connect Wallet
+        </>
+      );
+    }
+
+    if (isExecuting) {
+      return (
+        <>
+          <Loader2 size={20} className="animate-spin" />
+          {getServiceType(blocks) === "glittr"
+            ? "Deploying..."
+            : "Processing..."}
+        </>
+      );
+    }
+
+    const serviceType = getServiceType(blocks);
+    return (
+      <>
+        <Play size={20} />
+        {serviceType === "glittr" ? "Deploy Contract" : "Execute Flow"}
+      </>
+    );
   };
 
   return (
@@ -75,22 +144,7 @@ const ExecuteButton: React.FC<{
         (!btcAddress || isExecuting) && "opacity-50 cursor-not-allowed"
       )}
     >
-      {!btcAddress ? (
-        <>
-          <Wallet size={20} />
-          Connect Wallet
-        </>
-      ) : isExecuting ? (
-        <>
-          <Loader2 size={20} className="animate-spin" />
-          Processing...
-        </>
-      ) : (
-        <>
-          <Play size={20} />
-          Execute Flow
-        </>
-      )}
+      {getButtonText()}
     </Button>
   );
 };
