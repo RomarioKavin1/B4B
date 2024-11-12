@@ -1,5 +1,4 @@
 import {
-  blocks,
   getAvailableTechnologies,
   getBlocksByTechnology,
 } from "@/constants/paths";
