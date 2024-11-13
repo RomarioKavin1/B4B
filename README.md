@@ -1,66 +1,76 @@
-Bitcoin4Babies (b4b) is an educational DeFi web app simplifying Bitcoin operations through visual drag-and-drop interfaces. Built with BOB Gateway, it helps beginners understand and execute complex Bitcoin transactions.
+# Bitcoin4Babies (b4b)
 
-Key features:
-- Visual block-based transaction builder
-- Real-time transaction preview
-- PSBT verification and signing
-- Interactive balance checks
-- Detailed transaction logs
-- Beginner-friendly UI
+**Bitcoin4Babies** (b4b) is an educational DeFi web application designed to simplify Bitcoin operations through an intuitive, visual, drag-and-drop interface. Built with the **BOB Gateway**, it aims to help beginners understand and execute complex Bitcoin transactions effortlessly.
 
-Using a neobrutalist design, b4b makes complex operations like bridging and intents accessible. Users can:
-1. Drag blocks to build flows
-2. See live transaction previews
-3. Verify PSBT details
-4. Execute transactions safely
+## Key Features
+- **Visual Block-based Transaction Builder:** Construct transactions using an easy drag-and-drop interface.
+- **Real-time Transaction Preview:** See live previews of transaction details before execution.
+- **PSBT Verification and Signing:** Safely verify and sign Partially Signed Bitcoin Transactions (PSBT).
+- **Interactive Balance Checks:** Check balances within the app seamlessly.
+- **Detailed Transaction Logs:** Keep track of all actions with comprehensive logs.
+- **Beginner-friendly UI:** A straightforward and approachable user interface.
 
-Tech stack:
-- Next.js/TypeScript
-- BOB Gateway SDK
-- Bitcoin wallet integration
-- Real-time validation
--Glittr
+Using a **neobrutalist design**, b4b makes advanced operations like bridging and setting intents accessible and intuitive.
 
-The app focuses on safety and education:
-- Clear warnings
-- Stepbystep guidance
-- Transaction verification
-- Detailed previews
+### User Workflow
+1. **Drag Blocks** - Build transaction flows with visual blocks.
+2. **Preview Transactions** - View live transaction previews as you build.
+3. **Verify PSBT Details** - Confirm transaction details before signing.
+4. **Execute Transactions Safely** - Carry out transactions with a clear understanding of the steps.
 
-Perfect for learning Bitcoin operations while maintaining security.Built for Bitcoin babies, by Bitcoin builders.
+## Tech Stack
+- **Next.js** and **TypeScript**
+- **BOB Gateway SDK** for Bitcoin integration
+- **Bitcoin Wallet Integration**
+- **Real-time Validation** with **Glittr**
+
+## Security and Educational Focus
+- **Clear Warnings** for safe operation
+- **Step-by-step Guidance** throughout the transaction process
+- **Transaction Verification** to ensure accuracy
+- **Detailed Previews** for added transparency
+
+Perfect for those new to Bitcoin, b4b is built for "Bitcoin babies" by experienced Bitcoin builders.
+
+---
 
 ## Getting Started
 
-First, run the development server:
+To get started with the development environment:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Run the development server:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   # or
+   bun dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. Open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+   You can start editing the page by modifying `app/page.tsx`; changes auto-update on save.
+
+   This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a font family created by Vercel.
+
+---
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+Explore these resources to deepen your understanding of Next.js:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and APIs.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive tutorial to get you started.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Visit [the Next.js GitHub repository](https://github.com/vercel/next.js) to view the code, provide feedback, and contribute!
+
+---
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy your Next.js app is on the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme), created by the Next.js team.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# B4B
+For detailed instructions, check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
